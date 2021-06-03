@@ -17,26 +17,39 @@ namespace ModelObjectConverter
 
             Console.WriteLine("請將Model檔放入tartget資料夾");
 
-            Console.WriteLine("請輸入來源的Model(Vo、Bo、Do(沒有詞尾)) : ");
+            Console.WriteLine("請輸入來源的Model(Vo、Bo、Do) 目前只有Do有能用 : ");
 
-            string target = GetInputStr(true);
+            string target = GetInputStr(new string[] { "Vo", "Bo", "Do" });
 
             Console.WriteLine("請輸入要轉成的Model(Vo、Bo) : ");
 
-            string output = GetInputStr(false);
+            string output = GetInputStr(new string[] { "Vo", "Bo" });
 
 
             Console.WriteLine("請輸入要變更的Namespace , 不變更請輸入空值");
 
             string nameSpace = Console.ReadLine();
 
+            Console.WriteLine("是否要繼承Base(Y、N) : ");
+
+            string f = GetInputStr(new string[] { "Y", "N" });
+
+            bool baseFlag = f == "Y";
+            string usingNameSpace = string.Empty;
+            if (baseFlag)
+            {
+                Console.WriteLine("要引用的namespace");
+
+                usingNameSpace = Console.ReadLine();
+            }
+
             Console.WriteLine();
 
-            ConvertProcess(target, output, nameSpace);
+            ConvertProcess(target, output, nameSpace, baseFlag, usingNameSpace);
 
         }
 
-        private static void ConvertProcess(string target, string output, string nameSpace)
+        private static void ConvertProcess(string target, string output, string nameSpace, bool baseFlag, string usingNameSpace)
         {
             var a = Directory.GetFiles("./target");
             if (a == null || a.Length <= 0)
@@ -130,6 +143,19 @@ namespace ModelObjectConverter
                     program = program.Substring(0, nsIndex) + nameSpace + program.Substring(program.IndexOf("\r\n", nsIndex));
                 }
 
+                if (baseFlag)
+                {
+                    //引用命名空間
+                    string strUsingNs = "using " + usingNameSpace + ";\r\n";
+                    program = strUsingNs + program;
+
+                    var classIndex = program.IndexOf("class");
+                    var classRowIndex = program.IndexOf("\r\n", classIndex);
+                    string strBase = " : Base" + output;
+
+                    program = program.Substring(0, classRowIndex) + strBase + program.Substring(classRowIndex);
+                }
+
                 program = program.Replace(className, newClassName);
 
                 foreach (var x in listClassNameTuple)
@@ -152,27 +178,32 @@ namespace ModelObjectConverter
             Console.WriteLine("轉換完成, 共轉換 " + successCount + " 個檔案");
         }
 
-        private static string GetInputStr(bool doFlag)
+        private static string GetInputStr(string[] sa)
         {
             string inputStr = string.Empty;
-            if (doFlag)
+            bool inloopFlag = true;
+            do
             {
-                while (string.IsNullOrEmpty(inputStr) || (inputStr != "Vo" && inputStr != "Bo" && inputStr != "Do"))
+                Console.Write("請輸入");
+                for (int i = 0; i < sa.Length; i++)
                 {
-                    Console.WriteLine("請輸入Vo或Bo或Do 請注意大小寫");
-                    inputStr = Console.ReadLine();
-                    //inputStr = inputStr.ToLower();
+                    Console.Write(sa[i]);
+                    if (i + 1 < sa.Length)
+                    {
+                        Console.Write('或');
+                    }
                 }
+                Console.WriteLine(" 請注意大小寫");
+
+                //Console.WriteLine("請輸入Vo或Bo或Do 請注意大小寫");
+                inputStr = Console.ReadLine();
+
+                inloopFlag = !sa.Contains(inputStr);
             }
-            else
-            {
-                while (string.IsNullOrEmpty(inputStr) || (inputStr != "Vo" && inputStr != "Bo"))
-                {
-                    Console.WriteLine("請輸入Vo或Bo 請注意大小寫");
-                    inputStr = Console.ReadLine();
-                    //inputStr = inputStr.ToLower();
-                }
-            }
+            while (
+                string.IsNullOrEmpty(inputStr) ||
+                inloopFlag
+                );
 
             return inputStr;
         }
