@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace ModelObjectConverter
 {
@@ -80,6 +82,27 @@ namespace ModelObjectConverter
                 Directory.CreateDirectory("./output");
             }
 
+            //先轉並記錄className
+            List<Tuple<string, string>> listClassNameTuple = new List<Tuple<string, string>>();
+            foreach (var path in ls)
+            {
+                string className = string.Empty;
+                string newClassName = string.Empty;
+
+                className = path.Substring(path.LastIndexOf("\\") + 1, path.LastIndexOf(".cs") - path.LastIndexOf("\\") - 1);
+
+                if (target == "Do")
+                {
+                    newClassName = className + output;
+                }
+                else
+                {
+                    newClassName = className.Substring(0, className.IndexOf(target)) + output + className.Substring(className.IndexOf(target) + target.Length);
+                }
+
+                listClassNameTuple.Add(new Tuple<string, string>(className, newClassName));
+            }
+
             foreach (var path in ls)
             {
                 string className = string.Empty;
@@ -105,11 +128,21 @@ namespace ModelObjectConverter
                     string orgNs = program.Substring(nsIndex, program.IndexOf("\r\n", nsIndex) - nsIndex);
 
                     program = program.Substring(0, nsIndex) + nameSpace + program.Substring(program.IndexOf("\r\n", nsIndex));
-
-
                 }
 
                 program = program.Replace(className, newClassName);
+
+                foreach (var x in listClassNameTuple)
+                {
+                    if (x.Item1 == className)
+                    {
+                        continue;
+                    }
+
+                    program = ReplaceInOrder(program, x.Item1, x.Item2, 0);
+
+                }
+
 
                 File.WriteAllText("./output/" + newClassName + ".cs", program);
 
@@ -144,14 +177,26 @@ namespace ModelObjectConverter
             return inputStr;
         }
 
-        public static string ReplaceFirst(string text, string search, string replace)
+        public static string ReplaceInOrder(string text, string search, string replace, int startIndex)
         {
-            int pos = text.IndexOf(search);
-            if (pos < 0)
+            int findIndex = text.IndexOf(search, startIndex);
+
+            if (findIndex > -1)
             {
-                return text;
+                //條件
+                if (text[findIndex - 1] == '<')
+                {
+                    text = text.Substring(0, findIndex) + replace + text.Substring(findIndex + search.Length);
+                }
+
+                int nextFindIndex = text.IndexOf(search, findIndex + 1);
+                if (nextFindIndex > -1)
+                {
+                    text = ReplaceInOrder(text, search, replace, findIndex + 1);
+                }
             }
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+
+            return text;
         }
     }
 }
