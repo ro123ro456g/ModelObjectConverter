@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,8 +9,13 @@ namespace ModelObjectConverter
 {
     class Program
     {
+        static IConfiguration Config { get; set; }
         static void Main(string[] args)
         {
+            Config = new ConfigurationBuilder()
+                                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                                .Build();
+
             if (!Directory.Exists("./target"))
             {
                 Directory.CreateDirectory("./target");
@@ -19,20 +25,24 @@ namespace ModelObjectConverter
 
             Console.WriteLine("請輸入來源的Model(Vo、Bo、Do) 目前只有Do有能用 : ");
 
-            string target = GetInputStr(new string[] { "Vo", "Bo", "Do" });
+            //string target = GetInputStr(new string[] { "Vo", "Bo", "Do" });
+            string target = Config["InputModel"];
 
             Console.WriteLine("請輸入要轉成的Model(Vo、Bo) : ");
 
-            string output = GetInputStr(new string[] { "Vo", "Bo" });
+            //string output = GetInputStr(new string[] { "Vo", "Bo" });
+            string output = Config["OutputModel"];
 
 
             Console.WriteLine("請輸入要變更的Namespace , 不變更請輸入空值");
 
-            string nameSpace = Console.ReadLine();
+            //string nameSpace = Console.ReadLine();
+            string nameSpace = Config["NameSpace"];
 
             Console.WriteLine("是否要繼承Base(Y、N) : ");
 
-            string f = GetInputStr(new string[] { "Y", "N" });
+            //string f = GetInputStr(new string[] { "Y", "N" });
+            string f = Config["IsInheritBase"];
 
             bool baseFlag = f == "Y";
             string usingNameSpace = string.Empty;
@@ -40,7 +50,8 @@ namespace ModelObjectConverter
             {
                 Console.WriteLine("要引用的namespace");
 
-                usingNameSpace = Console.ReadLine();
+                //usingNameSpace = Console.ReadLine();
+                usingNameSpace = Config["Using"];
             }
 
             Console.WriteLine();
@@ -122,6 +133,9 @@ namespace ModelObjectConverter
                 string newClassName = string.Empty;
                 string program = File.ReadAllText(path);
 
+                //排除[]及內容
+                program = ExcludeBrackets(program);
+
                 className = path.Substring(path.LastIndexOf("\\") + 1, path.LastIndexOf(".cs") - path.LastIndexOf("\\") - 1);
 
                 if (target == "Do")
@@ -176,6 +190,27 @@ namespace ModelObjectConverter
             }
 
             Console.WriteLine("轉換完成, 共轉換 " + successCount + " 個檔案");
+        }
+
+        private static string ExcludeBrackets(string program)
+        {
+            if (program.Contains('['))
+            {
+                //行開頭
+                int beginIndex = program.Substring(0, program.IndexOf('[')).LastIndexOf("\r\n");
+
+                int endIndex = program.IndexOf('[') + program.Substring(program.IndexOf('[')).IndexOf("\r\n");
+
+                var a = program.Substring(0, beginIndex) + program.Substring(endIndex);
+
+                program = a;
+
+                return ExcludeBrackets(program);
+            }
+            else
+            {
+                return program;
+            }
         }
 
         private static string GetInputStr(string[] sa)
