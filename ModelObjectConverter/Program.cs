@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace ModelObjectConverter
 {
@@ -184,7 +185,7 @@ namespace ModelObjectConverter
                 }
 
 
-                File.WriteAllText("./output/" + newClassName + ".cs", program);
+                File.WriteAllText("./output/" + newClassName + ".cs", program, Encoding.UTF8);
 
                 successCount++;
             }
